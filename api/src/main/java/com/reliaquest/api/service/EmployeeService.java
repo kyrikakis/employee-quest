@@ -1,7 +1,7 @@
 package com.reliaquest.api.service;
 
 import com.reliaquest.api.model.Employee;
-import com.reliaquest.api.rest.client.EmployeeApiClientService;
+import com.reliaquest.api.rest.client.EmployeeApiClientV1;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
@@ -19,7 +19,7 @@ public class EmployeeService {
     // It will interact with the database or any other data source as needed.
 
     @Getter
-    private final EmployeeApiClientService employeeApiClientService;
+    private final EmployeeApiClientV1 employeeApiClientService;
 
     // Example method to create an employee
     public void createEmployee(String name, Integer salary, Integer age, String title) {
@@ -43,7 +43,7 @@ public class EmployeeService {
 
     public List<Employee> getAllEmployees() {
         // Logic to retrieve all employees
-        return employeeApiClientService.getAllEmployeesResponse();
+        return employeeApiClientService.getAllEmployeesResponse().collectList().block();
     }
 
     public List<Employee> getEmployeesByName(String name) {

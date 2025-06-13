@@ -10,9 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/employees")
+@RequestMapping("api/v1/employee")
 @RequiredArgsConstructor
-public class EmployeeControllerImpl implements IEmployeeController<Employee, Employee> {
+public class EmployeeRestController implements IEmployeeController<Employee, Employee> {
 
     @Getter
     private final EmployeeService employeeService;

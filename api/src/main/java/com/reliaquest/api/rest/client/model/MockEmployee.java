@@ -1,9 +1,8 @@
-package com.reliaquest.api.model;
+package com.reliaquest.api.rest.client.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,20 +14,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class Employee {
+public class MockEmployee {
 
-    @ApiModelProperty(notes = "The unique identifier of the employee")
     private String id;
-
-    @ApiModelProperty(notes = "The employee name")
-    private String name;
-
-    @ApiModelProperty(notes = "The employee name")
-    private Integer salary;
-
-    private Integer age;
-
-    private String title;
-
-    private String email;
+    private String employeeName;
+    private Integer employeeSalary;
+    private Integer employeeAge;
+    private String employeeTitle;
+    private String employeeEmail;
 }

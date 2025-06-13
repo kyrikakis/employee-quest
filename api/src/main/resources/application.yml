@@ -1,2 +1,21 @@
 spring.application.name: employee-api
 server.port: 8111
+
+mock-employee-api:
+  base-url: http://localhost:8112/api/v1/employee
+  get-all-path:
+  get-by-id-path: /{id}
+  create-path:
+  delete-path: /{id}
+logging:
+  level:
+    org.springframework.web.client.RestTemplate: DEBUG
+    com.example.employeeapi: DEBUG
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always

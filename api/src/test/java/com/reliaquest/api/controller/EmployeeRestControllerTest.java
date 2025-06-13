@@ -17,13 +17,13 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-public class EmployeeControllerImplTest {
+public class EmployeeRestControllerTest {
 
     @Mock
     private EmployeeService employeeService;
 
     @InjectMocks
-    private EmployeeControllerImpl employeeServiceImpl;
+    private EmployeeRestController employeeRestController;
 
     @BeforeEach
     void setUp() {
@@ -33,14 +33,14 @@ public class EmployeeControllerImplTest {
     @Test
     void testGetAllEmployees() {
         // Arrange
-        Employee employee1 = new Employee("1", "John Doe", 50000, 50, "Mr");
-        Employee employee2 = new Employee("2", "Jane Smith", 60000, 30, "Ms");
+        Employee employee1 = new Employee("1", "John Doe", 50000, 50, "Mr", "joe@doe.com");
+        Employee employee2 = new Employee("2", "Jane Smith", 60000, 30, "Ms", "jane@smith.com");
         List<Employee> mockEmployees = Arrays.asList(employee1, employee2);
 
         when(employeeService.getAllEmployees()).thenReturn(mockEmployees);
 
         // Act
-        ResponseEntity<List<Employee>> response = employeeServiceImpl.getAllEmployees();
+        ResponseEntity<List<Employee>> response = employeeRestController.getAllEmployees();
 
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
