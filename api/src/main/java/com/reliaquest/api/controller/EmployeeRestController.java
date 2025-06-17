@@ -19,7 +19,8 @@ public class EmployeeRestController implements IEmployeeController<Employee, Emp
 
     @Override
     public ResponseEntity<List<Employee>> getAllEmployees() {
-        List<Employee> allEmployees = employeeService.getAllEmployees();
+        List<Employee> allEmployees =
+                employeeService.getAllEmployees().collectList().block();
         return ResponseEntity.ok().body(allEmployees);
     }
 

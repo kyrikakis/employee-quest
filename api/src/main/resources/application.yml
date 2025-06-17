@@ -19,3 +19,8 @@ management:
   endpoint:
     health:
       show-details: always
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379

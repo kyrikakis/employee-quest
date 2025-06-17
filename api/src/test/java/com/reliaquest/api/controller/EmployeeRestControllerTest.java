@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import reactor.core.publisher.Flux;
 
 public class EmployeeRestControllerTest {
 
@@ -37,7 +38,7 @@ public class EmployeeRestControllerTest {
         Employee employee2 = new Employee("2", "Jane Smith", 60000, 30, "Ms", "jane@smith.com");
         List<Employee> mockEmployees = Arrays.asList(employee1, employee2);
 
-        when(employeeService.getAllEmployees()).thenReturn(mockEmployees);
+        when(employeeService.getAllEmployees()).thenReturn(Flux.fromIterable(mockEmployees));
 
         // Act
         ResponseEntity<List<Employee>> response = employeeRestController.getAllEmployees();

@@ -2,15 +2,50 @@ plugins {
     id 'project-conventions'
 }
 
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     implementation 'io.springfox:springfox-boot-starter:3.0.0'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+    implementation 'com.redis:lettucemod:4.3.0'
+
+    // Test dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.wiremock:wiremock-jetty12:3.13.1'
 }
 
 springBoot {
     mainClass = 'com.reliaquest.api.ApiApplication'
+}
+
+tasks.register('startRedis', Exec) {
+    description = 'Starts the Redis Docker container using docker compose.'
+    group = 'redis'
+    commandLine 'docker', 'compose', '-f', 'docker-compose.yml', 'up', '-d', 'redis'
+    // Ensure docker compose is installed and in your PATH
+    // -f specifies the compose file, up -d runs in detached mode, 'redis' starts only the redis service
+}
+
+tasks.register('stopRedis', Exec) {
+    description = 'Stops and removes the Redis Docker container using docker compose.'
+    group = 'redis'
+    commandLine 'docker', 'compose', '-f', 'docker-compose.yml', 'down', 'redis'
+    // 'down' stops and removes containers, networks, and volumes
+}
+
+// This will start Redis before your Spring Boot app if you run 'gradle bootRun'
+tasks.named('bootRun') {
+    dependsOn 'startRedis'
+    doLast {
+        println "Spring Boot application started. Make sure to run 'gradle stopRedis' later."
+    }
 }
