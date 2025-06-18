@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("api/v1/employee")
@@ -35,8 +36,12 @@ public class EmployeeRestController implements IEmployeeController<Employee, Emp
 
     @Override
     public ResponseEntity<Employee> getEmployeeById(String id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getEmployeeById'");
+        Mono<Employee> employeeMono = employeeService.getEmployeeById(id);
+        Employee employee = employeeMono.block();
+        if (employee != null) {
+            return ResponseEntity.ok().body(employee);
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @Override

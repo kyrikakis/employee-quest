@@ -127,4 +127,24 @@ class EmployeeServiceTest {
         verify(redisModulesReactiveCommands).zadd("employee_salaries", 100000.0, "id-1");
         verify(redisModulesReactiveCommands).zadd("employee_salaries", 90000.0, "id-2");
     }
+
+    @Test
+    void testGetEmployeeById_found() throws Exception {
+        // Given
+        String employeeId = "id-1";
+        String redisKey = "employee:" + employeeId;
+
+        Employee expectedEmployee = new Employee(employeeId, "Alice", 100000, 30, "Engineer", "alice@example.com");
+        String json = new ObjectMapper().writeValueAsString(expectedEmployee);
+
+        when(redisModulesReactiveCommands.jsonGet(redisKey)).thenReturn(Mono.just(json));
+
+        // When
+        StepVerifier.create(employeeService.getEmployeeById(employeeId))
+                .expectNext(expectedEmployee)
+                .verifyComplete();
+
+        // Then
+        verify(redisModulesReactiveCommands).jsonGet(redisKey);
+    }
 }

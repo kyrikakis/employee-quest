@@ -180,4 +180,18 @@ public class EmployeeService {
                     }
                 });
     }
+
+    public Mono<Employee> getEmployeeById(String id) {
+        String key = EMPLOYEE_KEY_PREFIX + id;
+        log.info("Fetching employee with ID: {}", id);
+
+        return redisModulesReactiveCommands.jsonGet(key).flatMap(json -> {
+            try {
+                return Mono.just(objectMapper.readValue(json, Employee.class));
+            } catch (Exception e) {
+                log.warn("Failed to parse employee JSON for ID {}: {}", id, e.getMessage());
+                return Mono.empty();
+            }
+        });
+    }
 }
