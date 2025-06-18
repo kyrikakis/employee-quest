@@ -19,7 +19,7 @@ This solution implements the required endpoints defined in the provided `IEmploy
 ```
 This will also excecute the `api:startRedis` step
 
-Note: Docker must be installed and running on your host machine to execute these tests.
+Note: Docker must be installed and running on your host machine to run the service.
 
 if you like to stop redis:
 ```bash
@@ -33,6 +33,8 @@ if you like to stop redis:
 The test suite uses Testcontainers and WireMock to create isolated, reproducible environments for integration testing.
 
 Note: Docker must be installed and running on your host machine to execute these tests.
+
+## Assessment
 
 #### In this assessment you will be tasked with filling out the functionality of different methods that will be listed further down.
 
