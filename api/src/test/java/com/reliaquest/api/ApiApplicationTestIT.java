@@ -10,8 +10,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.dockerjava.zerodep.shaded.org.apache.hc.core5.http.HttpStatus;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.rest.client.model.MockEmployee;
 import com.reliaquest.api.rest.client.model.MockResponse;
 import java.util.Arrays;
@@ -65,7 +67,7 @@ class ApiApplicationTestIT {
         registry.add("spring.redis.host", () -> host);
         registry.add("spring.redis.port", () -> port);
 
-        registry.add("mock-employee-api.base-url", () -> "http://localhost:" + WIREMOCK_FIXED_TEST_PORT + "/employees");
+        registry.add("mock-employee-api.base-url", () -> "http://localhost:" + WIREMOCK_FIXED_TEST_PORT + "/employee");
         System.out.printf("🧪 Redis is at %s:%d%n", host, port);
     }
 
@@ -86,7 +88,7 @@ class ApiApplicationTestIT {
 
         // Define the WireMock stub (mock response)
         stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(
-                        urlEqualTo("/employees")) // Matches GET requests to /employees
+                        urlEqualTo("/employee")) // Matches GET requests to /employees
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
@@ -139,5 +141,41 @@ class ApiApplicationTestIT {
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0]").value("WireMock Bob"))
                 .andExpect(jsonPath("$[1]").value("WireMock Alice"));
+    }
+
+    @Test
+    void shouldCreateEmployeeSuccessfully() throws Exception {
+        // Create mock request & expected mock response
+        MockEmployee createdMockEmployee =
+                new MockEmployee("wiremock-3", "New Guy", 75000, 32, "Engineer", "new.guy@example.com");
+
+        MockResponse<MockEmployee> mockResponse = new MockResponse<>(createdMockEmployee, "success");
+
+        // Stub the WireMock endpoint for POST
+        stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(urlEqualTo("/employee"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.SC_CREATED)
+                        .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(objectMapper.writeValueAsString(mockResponse))));
+
+        // Prepare request JSON
+        CreateEmployeeInput createEmployeeInput = new CreateEmployeeInput();
+        createEmployeeInput.setName("New Guy");
+        createEmployeeInput.setSalary(75000);
+        createEmployeeInput.setAge(32);
+        createEmployeeInput.setTitle("Engineer");
+
+        String requestJson = objectMapper.writeValueAsString(createEmployeeInput);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/employee")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value("wiremock-3"))
+                .andExpect(jsonPath("$.name").value("New Guy"))
+                .andExpect(jsonPath("$.salary").value(75000))
+                .andExpect(jsonPath("$.age").value(32))
+                .andExpect(jsonPath("$.title").value("Engineer"))
+                .andExpect(jsonPath("$.email").value("new.guy@example.com"));
     }
 }

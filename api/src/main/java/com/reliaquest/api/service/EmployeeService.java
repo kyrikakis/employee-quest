@@ -5,6 +5,7 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.reactive.RedisModulesReactiveCommands;
 import com.redis.lettucemod.search.CreateOptions;
 import com.redis.lettucemod.search.Field;
+import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
 import com.reliaquest.api.rest.client.EmployeeApiClientV1;
 import jakarta.annotation.PostConstruct;
@@ -205,5 +206,25 @@ public class EmployeeService {
     public Flux<String> getTop10HighestEarningEmployeeNames() {
         return redisModulesReactiveCommands.zrevrange(SALARY_ZSET_KEY, 0, 9).flatMap(id -> getEmployeeById(id)
                 .map(Employee::getName));
+    }
+
+    public Mono<Employee> createEmployee(CreateEmployeeInput input) {
+        return employeeApiClient
+                .createEmployee(input) // Calls downstream API, returns Mono<Employee>
+                .flatMap(employee -> {
+                    try {
+                        String key = "employee:" + employee.getId();
+                        String json = objectMapper.writeValueAsString(employee);
+
+                        return redisModulesReactiveCommands
+                                .jsonSet(key, "$", json)
+                                .then(redisModulesReactiveCommands.zadd(
+                                        "employee_salaries", employee.getSalary(), employee.getId()))
+                                .thenReturn(employee);
+                    } catch (Exception e) {
+                        log.error("Failed to serialize employee: {}", e.getMessage());
+                        return Mono.empty();
+                    }
+                });
     }
 }

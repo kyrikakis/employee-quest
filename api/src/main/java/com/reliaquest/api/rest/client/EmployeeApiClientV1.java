@@ -1,5 +1,7 @@
 package com.reliaquest.api.rest.client;
 
+import com.reliaquest.api.exception.ExternalApiException;
+import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
 import com.reliaquest.api.rest.client.model.MockEmployee;
 import com.reliaquest.api.rest.client.model.MockResponse;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Component("employeeApiClient")
 @Slf4j
@@ -77,9 +80,30 @@ public class EmployeeApiClientV1 implements IEmployeeApiClient {
                     return Flux.fromIterable(clientEmployees).map(this::mapClientEmployeeToEmployee);
                 })
                 .onErrorResume(WebClientResponseException.class, e -> {
-                    log.error("Error fetching all employees: {}", e.getMessage());
-                    return Flux.empty();
+                    log.error("Downstream API error: {} {}", e.getStatusCode().value(), e.getResponseBodyAsString());
+                    return Mono.error(new ExternalApiException(
+                            "Employee API error", e.getStatusCode().value()));
                 })
                 .doOnError(e -> log.error("Error fetching all employees: {}", e.getMessage()));
+    }
+
+    public Mono<Employee> createEmployee(CreateEmployeeInput input) {
+        log.info("Creating employee via path: {}", createPath);
+
+        return webClient
+                .post()
+                .uri(createPath)
+                .bodyValue(input)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<MockResponse<MockEmployee>>() {})
+                .<Employee>map(resp -> {
+                    MockEmployee mockEmployee = resp.getData();
+                    return mapClientEmployeeToEmployee(mockEmployee);
+                })
+                .onErrorResume(WebClientResponseException.class, e -> {
+                    log.error("Downstream API error: {} {}", e.getStatusCode().value(), e.getResponseBodyAsString());
+                    return Mono.error(new ExternalApiException(
+                            "Employee API error", e.getStatusCode().value()));
+                });
     }
 }

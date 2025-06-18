@@ -11,6 +11,7 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.reactive.RedisModulesReactiveCommands;
 import com.redis.lettucemod.search.Document;
 import com.redis.lettucemod.search.SearchResults;
+import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
 import com.reliaquest.api.rest.client.EmployeeApiClientV1;
 import io.lettuce.core.ScoredValue;
@@ -200,5 +201,35 @@ class EmployeeServiceTest {
         StepVerifier.create(employeeService.getTop10HighestEarningEmployeeNames())
                 .expectNextSequence(expectedNames)
                 .verifyComplete();
+    }
+
+    @Test
+    void testCreateEmployee_success() throws Exception {
+        // Arrange input and expected Employee
+        CreateEmployeeInput input = new CreateEmployeeInput();
+        input.setName("Test User");
+        input.setAge(30);
+        input.setSalary(120000);
+        input.setTitle("Engineer");
+
+        Employee expectedEmployee = new Employee("emp-1", "Test User", 120000, 30, "Engineer", "test@example.com");
+
+        // Mock downstream create
+        when(employeeApiClient.createEmployee(eq(input))).thenReturn(Mono.just(expectedEmployee));
+
+        // Mock Redis JSON and ZADD
+        when(redisModulesReactiveCommands.jsonSet(eq("employee:emp-1"), eq("$"), contains("Test User")))
+                .thenReturn(Mono.just("OK"));
+        when(redisModulesReactiveCommands.zadd(eq("employee_salaries"), eq(120000.0), eq("emp-1")))
+                .thenReturn(Mono.just(1L));
+
+        // Act & Assert
+        StepVerifier.create(employeeService.createEmployee(input))
+                .expectNext(expectedEmployee)
+                .verifyComplete();
+
+        // Verify side effects
+        verify(redisModulesReactiveCommands).jsonSet(eq("employee:emp-1"), eq("$"), contains("Test User"));
+        verify(redisModulesReactiveCommands).zadd("employee_salaries", 120000.0, "emp-1");
     }
 }

@@ -1,10 +1,13 @@
 package com.reliaquest.api.controller;
 
+import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
 import com.reliaquest.api.service.EmployeeService;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,7 +16,7 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("api/v1/employee")
 @RequiredArgsConstructor
-public class EmployeeRestController implements IEmployeeController<Employee, Employee> {
+public class EmployeeRestController implements IEmployeeController<Employee, CreateEmployeeInput> {
 
     @Getter
     private final EmployeeService employeeService;
@@ -66,9 +69,13 @@ public class EmployeeRestController implements IEmployeeController<Employee, Emp
     }
 
     @Override
-    public ResponseEntity<Employee> createEmployee(Employee employeeInput) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'createEmployee'");
+    public ResponseEntity<Employee> createEmployee(@Valid CreateEmployeeInput employeeInput) {
+        return employeeService
+                .createEmployee(employeeInput)
+                .map(saved -> ResponseEntity.status(HttpStatus.CREATED).body(saved))
+                .defaultIfEmpty(
+                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build())
+                .block();
     }
 
     @Override
