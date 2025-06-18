@@ -45,6 +45,12 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", "The external service is currently unavailable. Please try again later."));
     }
 
+    @ExceptionHandler(EmployeeNotFoundException.class)
+    public ResponseEntity<?> handleEmployeeNotFound(EmployeeNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "The requested employee was not found."));
+    }
+
     @ExceptionHandler(Throwable.class)
     public ResponseEntity<String> handleUnexpectedException(Throwable ex) {
         log.error("Unexpected error occurred", ex);

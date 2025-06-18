@@ -80,7 +80,13 @@ public class EmployeeRestController implements IEmployeeController<Employee, Cre
 
     @Override
     public ResponseEntity<String> deleteEmployeeById(String id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'deleteEmployeeById'");
+        if (id == null || id.isBlank()) {
+            return ResponseEntity.badRequest().body("ID cannot be null or blank");
+        }
+        Mono<String> deleteResult = employeeService.deleteEmployeeById(id);
+        return deleteResult
+                .map(deletedId -> ResponseEntity.ok().body(deletedId))
+                .defaultIfEmpty(ResponseEntity.notFound().build())
+                .block();
     }
 }

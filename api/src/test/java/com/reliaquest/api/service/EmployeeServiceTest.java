@@ -1,5 +1,7 @@
 package com.reliaquest.api.service;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
@@ -11,6 +13,8 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.reactive.RedisModulesReactiveCommands;
 import com.redis.lettucemod.search.Document;
 import com.redis.lettucemod.search.SearchResults;
+import com.reliaquest.api.exception.EmployeeNotFoundException;
+import com.reliaquest.api.exception.ExternalApiException;
 import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
 import com.reliaquest.api.rest.client.EmployeeApiClientV1;
@@ -231,5 +235,118 @@ class EmployeeServiceTest {
         // Verify side effects
         verify(redisModulesReactiveCommands).jsonSet(eq("employee:emp-1"), eq("$"), contains("Test User"));
         verify(redisModulesReactiveCommands).zadd("employee_salaries", 120000.0, "emp-1");
+    }
+
+    @Test
+    void testCreateEmployee_downstreamApiFails() {
+        CreateEmployeeInput input = new CreateEmployeeInput();
+        input.setName("Failing User");
+        input.setAge(30);
+        input.setSalary(100000);
+        input.setTitle("Engineer");
+
+        when(employeeApiClient.createEmployee(eq(input)))
+                .thenReturn(Mono.error(new ExternalApiException("API failed", 500)));
+
+        StepVerifier.create(employeeService.createEmployee(input))
+                .expectError(ExternalApiException.class)
+                .verify();
+
+        verify(employeeApiClient).createEmployee(eq(input));
+        verifyNoInteractions(redisModulesReactiveCommands); // ensure no Redis writes
+    }
+
+    @Test
+    void testCreateEmployee_redisJsonSetFails() throws Exception {
+        CreateEmployeeInput input = new CreateEmployeeInput();
+        input.setName("Test User");
+        input.setAge(30);
+        input.setSalary(120000);
+        input.setTitle("Engineer");
+
+        Employee employee = new Employee("emp-1", "Test User", 120000, 30, "Engineer", "test@example.com");
+
+        when(employeeApiClient.createEmployee(eq(input))).thenReturn(Mono.just(employee));
+        when(redisModulesReactiveCommands.jsonSet(eq("employee:emp-1"), eq("$"), contains("Test User")))
+                .thenReturn(Mono.error(new RuntimeException("Redis JSON failure")));
+
+        StepVerifier.create(employeeService.createEmployee(input))
+                .expectError(RuntimeException.class)
+                .verify();
+
+        verify(redisModulesReactiveCommands).jsonSet(any(), any(), any());
+        verify(redisModulesReactiveCommands, never()).zadd(any(), anyDouble(), any());
+    }
+
+    @Test
+    void testDeleteEmployeeById_success() throws Exception {
+        String id = "emp-1";
+        String redisKey = "employee:" + id;
+
+        Employee employee = new Employee(id, "Alice", 100000, 30, "Engineer", "alice@example.com");
+        String employeeJson = objectMapper.writeValueAsString(employee);
+
+        // Mock: get employee from Redis
+        when(redisModulesReactiveCommands.jsonGet(redisKey)).thenReturn(Mono.just(employeeJson));
+
+        // Mock: downstream delete by name succeeds
+        when(employeeApiClient.deleteEmployeeByName("Alice")).thenReturn(Mono.just(true));
+
+        // Mock: Redis DEL and ZREM succeed
+        when(redisModulesReactiveCommands.del(redisKey)).thenReturn(Mono.just(1L));
+        when(redisModulesReactiveCommands.zrem("employee_salaries", id)).thenReturn(Mono.just(1L));
+
+        // Execute & verify
+        StepVerifier.create(employeeService.deleteEmployeeById(id))
+                .expectNext("Alice")
+                .verifyComplete();
+
+        verify(redisModulesReactiveCommands).jsonGet(redisKey);
+        verify(employeeApiClient).deleteEmployeeByName("Alice");
+        verify(redisModulesReactiveCommands).del(redisKey);
+        verify(redisModulesReactiveCommands).zrem("employee_salaries", id);
+    }
+
+    @Test
+    void testDeleteEmployeeById_employeeNotFound() {
+        when(redisModulesReactiveCommands.jsonGet("employee:emp-404")).thenReturn(Mono.empty());
+
+        StepVerifier.create(employeeService.deleteEmployeeById("emp-404"))
+                .expectError(EmployeeNotFoundException.class)
+                .verify();
+    }
+
+    @Test
+    void testDeleteEmployeeById_downstreamDeleteFails() throws Exception {
+        String id = "emp-1";
+        Employee emp = new Employee(id, "Alice", 100000, 30, "Engineer", "alice@example.com");
+
+        when(redisModulesReactiveCommands.jsonGet("employee:" + id))
+                .thenReturn(Mono.just(objectMapper.writeValueAsString(emp)));
+
+        when(employeeApiClient.deleteEmployeeByName("Alice")).thenReturn(Mono.just(false)); // simulate failure
+
+        StepVerifier.create(employeeService.deleteEmployeeById(id))
+                .expectErrorMatches(
+                        e -> e instanceof ExternalApiException && ((ExternalApiException) e).getStatus() == 500)
+                .verify();
+    }
+
+    @Test
+    void testDeleteEmployeeById_redisDeleteFails() throws Exception {
+        String id = "emp-1";
+        Employee emp = new Employee(id, "Alice", 100000, 30, "Engineer", "alice@example.com");
+
+        when(redisModulesReactiveCommands.jsonGet("employee:" + id))
+                .thenReturn(Mono.just(objectMapper.writeValueAsString(emp)));
+
+        when(employeeApiClient.deleteEmployeeByName("Alice")).thenReturn(Mono.just(true));
+
+        when(redisModulesReactiveCommands.del("employee:" + id))
+                .thenReturn(Mono.error(new RuntimeException("Redis DEL error")));
+
+        StepVerifier.create(employeeService.deleteEmployeeById(id))
+                .expectError(RuntimeException.class)
+                .verify();
     }
 }

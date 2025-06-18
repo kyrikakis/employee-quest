@@ -204,4 +204,32 @@ class EmployeeRestControllerTest {
                 .andExpect(jsonPath("$.error")
                         .value("The external service is currently unavailable. Please try again later."));
     }
+
+    @Test
+    void testDeleteEmployeeById_success() throws Exception {
+        String id = "emp-123";
+        String name = "John Doe";
+
+        when(employeeService.deleteEmployeeById(eq(id))).thenReturn(Mono.just(name));
+
+        mockMvc.perform(delete("/api/v1/employee/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(content().string(name));
+    }
+
+    @Test
+    void testDeleteEmployeeById_blankId_returnsBadRequest() throws Exception {
+        mockMvc.perform(delete("/api/v1/employee/ "))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("ID cannot be null or blank"));
+    }
+
+    @Test
+    void testDeleteEmployeeById_notFound_returnsNotFound() throws Exception {
+        String id = "nonexistent";
+
+        when(employeeService.deleteEmployeeById(eq(id))).thenReturn(Mono.empty());
+
+        mockMvc.perform(delete("/api/v1/employee/{id}", id)).andExpect(status().isNotFound());
+    }
 }

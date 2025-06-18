@@ -13,9 +13,11 @@ import com.reliaquest.api.rest.client.model.MockResponse;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
@@ -175,6 +177,63 @@ class EmployeeApiClientV1Test {
         Mono<Employee> result = employeeApiClient.createEmployee(input);
 
         StepVerifier.create(result)
+                .expectErrorSatisfies(throwable -> {
+                    assertInstanceOf(ExternalApiException.class, throwable);
+                    assertEquals(500, ((ExternalApiException) throwable).getStatus());
+                })
+                .verify();
+    }
+
+    @Test
+    void testDeleteEmployeeByName_Success() {
+        String name = "John Doe";
+        MockResponse<Boolean> mockResponse = new MockResponse<>(true, "success");
+
+        when(webClient.method(HttpMethod.DELETE)).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(deletePath)).thenReturn(requestBodySpec);
+        when(requestBodySpec.bodyValue(Map.of("name", name))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class))).thenReturn(Mono.just(mockResponse));
+
+        StepVerifier.create(employeeApiClient.deleteEmployeeByName(name))
+                .expectNext(true)
+                .verifyComplete();
+
+        verify(webClient, times(1)).method(HttpMethod.DELETE);
+        verify(requestBodyUriSpec, times(1)).uri(deletePath);
+        verify(requestBodySpec, times(1)).bodyValue(Map.of("name", name));
+        verify(requestHeadersSpec, times(1)).retrieve();
+        verify(responseSpec, times(1)).bodyToMono(any(ParameterizedTypeReference.class));
+    }
+
+    @Test
+    void testDeleteEmployeeByName_FailureFromApi() {
+        String name = "Jane Smith";
+        MockResponse<Boolean> mockResponse = new MockResponse<>(false, "not found");
+
+        when(webClient.method(HttpMethod.DELETE)).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(deletePath)).thenReturn(requestBodySpec);
+        when(requestBodySpec.bodyValue(Map.of("name", name))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class))).thenReturn(Mono.just(mockResponse));
+
+        StepVerifier.create(employeeApiClient.deleteEmployeeByName(name))
+                .expectNext(false)
+                .verifyComplete();
+    }
+
+    @Test
+    void testDeleteEmployeeByName_ErrorResponse() {
+        String name = "Ghost";
+
+        when(webClient.method(HttpMethod.DELETE)).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(deletePath)).thenReturn(requestBodySpec);
+        when(requestBodySpec.bodyValue(Map.of("name", name))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
+                .thenReturn(Mono.error(new WebClientResponseException(500, "Internal Server Error", null, null, null)));
+
+        StepVerifier.create(employeeApiClient.deleteEmployeeByName(name))
                 .expectErrorSatisfies(throwable -> {
                     assertInstanceOf(ExternalApiException.class, throwable);
                     assertEquals(500, ((ExternalApiException) throwable).getStatus());

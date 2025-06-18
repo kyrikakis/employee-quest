@@ -19,7 +19,10 @@ import com.reliaquest.api.rest.client.model.MockResponse;
 import java.util.Arrays;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,6 +38,7 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ApiApplicationTestIT {
 
     // NEW: Stop WireMock server after all tests
@@ -96,6 +100,7 @@ class ApiApplicationTestIT {
     }
 
     @Test
+    @Order(1)
     void shouldReturnAllEmployeesFromWireMock() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/employee"))
                 .andExpect(status().isOk())
@@ -109,6 +114,7 @@ class ApiApplicationTestIT {
     }
 
     @Test
+    @Order(2)
     void shouldReturnEmployeeByNameSearch() throws Exception {
         mockMvc.perform(get("/api/v1/employee/search/WireMock"))
                 .andExpect(status().isOk())
@@ -118,6 +124,7 @@ class ApiApplicationTestIT {
     }
 
     @Test
+    @Order(3)
     void shouldReturnEmployeeById() throws Exception {
         mockMvc.perform(get("/api/v1/employee/wiremock-1"))
                 .andExpect(status().isOk())
@@ -126,6 +133,7 @@ class ApiApplicationTestIT {
     }
 
     @Test
+    @Order(4)
     void shouldReturnHighestSalary() throws Exception {
         mockMvc.perform(get("/api/v1/employee/highestSalary"))
                 .andExpect(status().isOk())
@@ -134,6 +142,7 @@ class ApiApplicationTestIT {
     }
 
     @Test
+    @Order(5)
     void shouldReturnTop10HighestEarningEmployeeNames() throws Exception {
         mockMvc.perform(get("/api/v1/employee/topTenHighestEarningEmployeeNames"))
                 .andExpect(status().isOk())
@@ -144,6 +153,7 @@ class ApiApplicationTestIT {
     }
 
     @Test
+    @Order(6)
     void shouldCreateEmployeeSuccessfully() throws Exception {
         // Create mock request & expected mock response
         MockEmployee createdMockEmployee =
@@ -177,5 +187,30 @@ class ApiApplicationTestIT {
                 .andExpect(jsonPath("$.age").value(32))
                 .andExpect(jsonPath("$.title").value("Engineer"))
                 .andExpect(jsonPath("$.email").value("new.guy@example.com"));
+    }
+
+    @Test
+    @Order(7)
+    void shouldDeleteEmployeeSuccessfullyUsingApi() throws Exception {
+        // Arrange
+        String id = "wiremock-2";
+        String name = "WireMock Bob";
+
+        // Stub downstream API to allow deletion by name
+        stubFor(com.github.tomakehurst.wiremock.client.WireMock.delete(urlEqualTo("/employee"))
+                .withRequestBody(com.github.tomakehurst.wiremock.client.WireMock.containing(name))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.SC_OK)
+                        .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(objectMapper.writeValueAsString(new MockResponse<>(true, "success")))));
+
+        // Act: delete via your app's API
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(
+                        "/api/v1/employee/" + id))
+                .andExpect(status().isOk())
+                .andExpect(content().string(name));
+
+        // Assert: subsequent GET by ID should return 404
+        mockMvc.perform(get("/api/v1/employee/" + id)).andExpect(status().isNotFound());
     }
 }

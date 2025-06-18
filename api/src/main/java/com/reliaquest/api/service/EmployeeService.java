@@ -5,6 +5,8 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.reactive.RedisModulesReactiveCommands;
 import com.redis.lettucemod.search.CreateOptions;
 import com.redis.lettucemod.search.Field;
+import com.reliaquest.api.exception.EmployeeNotFoundException;
+import com.reliaquest.api.exception.ExternalApiException;
 import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
 import com.reliaquest.api.rest.client.EmployeeApiClientV1;
@@ -34,12 +36,12 @@ public class EmployeeService {
     /**
      * Constructor for EmployeeService.
      *
-     * @param employeeApiClient           The client to fetch employee data from the
-     *                                    external API.
-     * @param redisModulesConnection      The Redis connection for modules (JSON,
-     *                                    Search).
-     * @param objectMapper                The Jackson ObjectMapper for JSON
-     *                                    serialization/deserialization.
+     * @param employeeApiClient      The client to fetch employee data from the
+     *                               external API.
+     * @param redisModulesConnection The Redis connection for modules (JSON,
+     *                               Search).
+     * @param objectMapper           The Jackson ObjectMapper for JSON
+     *                               serialization/deserialization.
      */
     public EmployeeService(
             EmployeeApiClientV1 employeeApiClient,
@@ -218,13 +220,32 @@ public class EmployeeService {
 
                         return redisModulesReactiveCommands
                                 .jsonSet(key, "$", json)
-                                .then(redisModulesReactiveCommands.zadd(
-                                        "employee_salaries", employee.getSalary(), employee.getId()))
-                                .thenReturn(employee);
+                                .flatMap(ok -> redisModulesReactiveCommands
+                                        .zadd("employee_salaries", employee.getSalary(), employee.getId())
+                                        .thenReturn(employee));
                     } catch (Exception e) {
                         log.error("Failed to serialize employee: {}", e.getMessage());
                         return Mono.empty();
                     }
+                });
+    }
+
+    public Mono<String> deleteEmployeeById(String id) {
+        String redisKey = EMPLOYEE_KEY_PREFIX + id;
+
+        return getEmployeeById(id)
+                .switchIfEmpty(Mono.error(new EmployeeNotFoundException(id)))
+                .flatMap(employee -> {
+                    String name = employee.getName();
+                    return employeeApiClient.deleteEmployeeByName(name).flatMap(success -> {
+                        if (!success) {
+                            return Mono.error(new ExternalApiException("Downstream deletion failed", 500));
+                        }
+                        return redisModulesReactiveCommands
+                                .del(redisKey)
+                                .then(redisModulesReactiveCommands.zrem(SALARY_ZSET_KEY, id))
+                                .thenReturn(name);
+                    });
                 });
     }
 }

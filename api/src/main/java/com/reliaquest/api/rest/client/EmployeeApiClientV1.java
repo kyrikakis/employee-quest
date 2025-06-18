@@ -7,10 +7,12 @@ import com.reliaquest.api.rest.client.model.MockEmployee;
 import com.reliaquest.api.rest.client.model.MockResponse;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -102,6 +104,23 @@ public class EmployeeApiClientV1 implements IEmployeeApiClient {
                 })
                 .onErrorResume(WebClientResponseException.class, e -> {
                     log.error("Downstream API error: {} {}", e.getStatusCode().value(), e.getResponseBodyAsString());
+                    return Mono.error(new ExternalApiException(
+                            "Employee API error", e.getStatusCode().value()));
+                });
+    }
+
+    public Mono<Boolean> deleteEmployeeByName(String name) {
+        log.info("Deleting employee with name: {}", name);
+
+        return webClient
+                .method(HttpMethod.DELETE)
+                .uri(deletePath)
+                .bodyValue(Map.of("name", name))
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<MockResponse<Boolean>>() {})
+                .map(resp -> resp.getData() != null && resp.getData())
+                .onErrorResume(WebClientResponseException.class, e -> {
+                    log.error("Failed to delete employee with name: {}, error: {}", name, e.getMessage());
                     return Mono.error(new ExternalApiException(
                             "Employee API error", e.getStatusCode().value()));
                 });
