@@ -55,8 +55,14 @@ public class EmployeeRestController implements IEmployeeController<Employee, Emp
 
     @Override
     public ResponseEntity<List<String>> getTopTenHighestEarningEmployeeNames() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getTopTenHighestEarningEmployeeNames'");
+        List<String> topTenNames = employeeService
+                .getTop10HighestEarningEmployeeNames()
+                .collectList()
+                .block();
+        if (topTenNames != null && !topTenNames.isEmpty()) {
+            return ResponseEntity.ok().body(topTenNames);
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @Override

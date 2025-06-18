@@ -101,4 +101,17 @@ public class EmployeeRestControllerTest {
         assertEquals(highestSalary, response.getBody());
         verify(employeeService, times(1)).getHighestSalaryOfEmployees();
     }
+
+    @Test
+    void testGetTopTenHighestEarningEmployeeNames() {
+        List<String> names = List.of("Alice", "Bob");
+
+        when(employeeService.getTop10HighestEarningEmployeeNames()).thenReturn(Flux.fromIterable(names));
+
+        ResponseEntity<List<String>> response = employeeRestController.getTopTenHighestEarningEmployeeNames();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(names, response.getBody());
+        verify(employeeService, times(1)).getTop10HighestEarningEmployeeNames();
+    }
 }

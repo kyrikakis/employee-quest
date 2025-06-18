@@ -1,10 +1,12 @@
 package com.reliaquest.api;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.configureFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -83,7 +85,8 @@ class ApiApplicationTestIT {
                 "success"));
 
         // Define the WireMock stub (mock response)
-        stubFor(get(urlEqualTo("/employees")) // Matches GET requests to /employees
+        stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(
+                        urlEqualTo("/employees")) // Matches GET requests to /employees
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
@@ -101,5 +104,40 @@ class ApiApplicationTestIT {
                 .andExpect(jsonPath("$[?(@.id == 'wiremock-1')].name").value("WireMock Alice"))
                 .andExpect(jsonPath("$[?(@.id == 'wiremock-2')]").exists())
                 .andExpect(jsonPath("$[?(@.id == 'wiremock-2')].name").value("WireMock Bob"));
+    }
+
+    @Test
+    void shouldReturnEmployeeByNameSearch() throws Exception {
+        mockMvc.perform(get("/api/v1/employee/search/WireMock"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].name").value("WireMock Alice"));
+    }
+
+    @Test
+    void shouldReturnEmployeeById() throws Exception {
+        mockMvc.perform(get("/api/v1/employee/wiremock-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("wiremock-1"))
+                .andExpect(jsonPath("$.name").value("WireMock Alice"));
+    }
+
+    @Test
+    void shouldReturnHighestSalary() throws Exception {
+        mockMvc.perform(get("/api/v1/employee/highestSalary"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().string("80000"));
+    }
+
+    @Test
+    void shouldReturnTop10HighestEarningEmployeeNames() throws Exception {
+        mockMvc.perform(get("/api/v1/employee/topTenHighestEarningEmployeeNames"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0]").value("WireMock Bob"))
+                .andExpect(jsonPath("$[1]").value("WireMock Alice"));
     }
 }

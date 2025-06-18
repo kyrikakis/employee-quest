@@ -201,4 +201,9 @@ public class EmployeeService {
                 .singleOrEmpty()
                 .map(tuple -> (int) tuple.getScore());
     }
+
+    public Flux<String> getTop10HighestEarningEmployeeNames() {
+        return redisModulesReactiveCommands.zrevrange(SALARY_ZSET_KEY, 0, 9).flatMap(id -> getEmployeeById(id)
+                .map(Employee::getName));
+    }
 }
