@@ -1,5 +1,39 @@
 # ReliaQuest Coding Challenge
 
+## Solution
+
+This solution implements the required endpoints defined in the provided `IEmployeeController` interface, using the upstream Mock Employee API as a data source. The application uses RedisStack (Redis with RedisJSON and RediSearch modules) to support structured storage, full-text search, and sorted set operations on employee data. The REST API is built with Spring Boot and reactive components for scalability and performance.
+
+## How to Run
+
+### 1. Start the Mock Employee API
+
+```bash
+./gradlew server:bootRun
+```
+
+### 2. Start the main Employee API service
+
+```bash
+./gradlew api:bootRun
+```
+This will also excecute the `api:startRedis` step
+
+Note: Docker must be installed and running on your host machine to execute these tests.
+
+if you like to stop redis:
+```bash
+./gradlew api:stopRedis
+```
+
+### 3. Run the test suite
+```bash
+./gradlew test
+```
+The test suite uses Testcontainers and WireMock to create isolated, reproducible environments for integration testing.
+
+Note: Docker must be installed and running on your host machine to execute these tests.
+
 #### In this assessment you will be tasked with filling out the functionality of different methods that will be listed further down.
 
 These methods will require some level of API interactions with Mock Employee API at http://localhost:8112/api/v1/employee.
