@@ -26,8 +26,11 @@ public class EmployeeRestController implements IEmployeeController<Employee, Emp
 
     @Override
     public ResponseEntity<List<Employee>> getEmployeesByNameSearch(String searchString) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getEmployeesByNameSearch'");
+        List<Employee> allEmployees = employeeService
+                .getEmployeesByNameSearch(searchString)
+                .collectList()
+                .block();
+        return ResponseEntity.ok().body(allEmployees);
     }
 
     @Override

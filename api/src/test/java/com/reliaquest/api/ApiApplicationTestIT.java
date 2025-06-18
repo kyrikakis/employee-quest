@@ -2,7 +2,7 @@ package com.reliaquest.api;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,18 +57,20 @@ class ApiApplicationTestIT {
 
     @DynamicPropertySource
     static void dynamicProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.redis.host", redisStackContainer::getHost);
-        registry.add(
-                "spring.data.redis.port",
-                () -> redisStackContainer.getMappedPort(6379).toString());
+        assertTrue(redisStackContainer.isRunning(), "Redis Testcontainer should be running");
+        String host = redisStackContainer.getHost();
+        Integer port = redisStackContainer.getMappedPort(6379);
+        registry.add("spring.redis.host", () -> host);
+        registry.add("spring.redis.port", () -> port);
 
-        // Point mock-employee-api.base-url to WireMock's fixed proxy port
         registry.add("mock-employee-api.base-url", () -> "http://localhost:" + WIREMOCK_FIXED_TEST_PORT + "/employees");
+        System.out.printf("🧪 Redis is at %s:%d%n", host, port);
     }
 
     // NEW: Start WireMock server before all tests
     @BeforeAll
     static void setupWireMock() throws JsonProcessingException {
+        assertTrue(redisStackContainer.isRunning(), "Redis Testcontainer should be running");
         wireMockServer =
                 new WireMockServer(WireMockConfiguration.wireMockConfig().port(WIREMOCK_FIXED_TEST_PORT));
         wireMockServer.start();

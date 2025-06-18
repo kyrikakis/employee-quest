@@ -13,7 +13,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
-    implementation 'com.redis:lettucemod:4.3.0'
+    implementation 'com.redis:spring-lettucemod:3.8.1'
 
     // Test dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
