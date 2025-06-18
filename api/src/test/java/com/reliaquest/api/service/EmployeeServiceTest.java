@@ -12,6 +12,7 @@ import com.redis.lettucemod.search.Document;
 import com.redis.lettucemod.search.SearchResults;
 import com.reliaquest.api.model.Employee;
 import com.reliaquest.api.rest.client.EmployeeApiClientV1;
+import io.lettuce.core.ScoredValue;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,6 @@ class EmployeeServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         when(redisModulesConnection.reactive()).thenReturn(redisModulesReactiveCommands);
-        when(employeeApiClient.getAllEmployeesResponse()).thenReturn(Flux.empty());
         employeeService = new EmployeeService(employeeApiClient, redisModulesConnection, new ObjectMapper());
     }
 
@@ -146,5 +146,18 @@ class EmployeeServiceTest {
 
         // Then
         verify(redisModulesReactiveCommands).jsonGet(redisKey);
+    }
+
+    @Test
+    void testGetHighestSalaryOfEmployees_returnsHighest() {
+        String highestPaidId = "id-999";
+        double highestSalary = 200000.0;
+
+        when(redisModulesReactiveCommands.zrevrangeWithScores(eq("employee_salaries"), eq(0L), eq(0L)))
+                .thenReturn(Flux.just(ScoredValue.just(highestSalary, highestPaidId)));
+
+        StepVerifier.create(employeeService.getHighestSalaryOfEmployees())
+                .expectNext((int) highestSalary)
+                .verifyComplete();
     }
 }

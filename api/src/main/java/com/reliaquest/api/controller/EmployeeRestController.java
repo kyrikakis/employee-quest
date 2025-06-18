@@ -46,8 +46,11 @@ public class EmployeeRestController implements IEmployeeController<Employee, Emp
 
     @Override
     public ResponseEntity<Integer> getHighestSalaryOfEmployees() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getHighestSalaryOfEmployees'");
+        Integer highestSalary = employeeService.getHighestSalaryOfEmployees().block();
+        if (highestSalary != null) {
+            return ResponseEntity.ok().body(highestSalary);
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @Override

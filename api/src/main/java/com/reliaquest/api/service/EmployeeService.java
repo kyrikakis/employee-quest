@@ -194,4 +194,11 @@ public class EmployeeService {
             }
         });
     }
+
+    public Mono<Integer> getHighestSalaryOfEmployees() {
+        return redisModulesReactiveCommands
+                .zrevrangeWithScores(SALARY_ZSET_KEY, 0, 0) // Get top 1 highest score with ID
+                .singleOrEmpty()
+                .map(tuple -> (int) tuple.getScore());
+    }
 }
