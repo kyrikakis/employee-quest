@@ -41,20 +41,9 @@ import org.testcontainers.utility.DockerImageName;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ApiApplicationTestIT {
 
-    // NEW: Stop WireMock server after all tests
-    @AfterAll
-    static void tearDownWireMock() {
-        if (wireMockServer != null) {
-            wireMockServer.stop();
-        }
-    }
-
     @Autowired
     private MockMvc mockMvc;
-
-    // NEW: WireMock server instance
     private static WireMockServer wireMockServer;
-    // NEW: Define a fixed port for WireMock in tests
     private static final int WIREMOCK_FIXED_TEST_PORT = 8050;
 
     private static ObjectMapper objectMapper = new ObjectMapper();
@@ -75,7 +64,6 @@ class ApiApplicationTestIT {
         System.out.printf("🧪 Redis is at %s:%d%n", host, port);
     }
 
-    // NEW: Start WireMock server before all tests
     @BeforeAll
     static void setupWireMock() throws JsonProcessingException {
         assertTrue(redisStackContainer.isRunning(), "Redis Testcontainer should be running");
@@ -97,6 +85,13 @@ class ApiApplicationTestIT {
                         .withStatus(200)
                         .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
                         .withBody(mockResponseBody)));
+    }
+
+    @AfterAll
+    static void tearDownWireMock() {
+        if (wireMockServer != null) {
+            wireMockServer.stop();
+        }
     }
 
     @Test
